@@ -1,0 +1,333 @@
+### Detailed Overview of the Discord Bot
+
+#### Introduction
+This Discord bot is designed to facilitate paper trading within a Discord server. Users can register, check their balances, manage trades, and view leaderboards. The bot uses the `discord.js` library version `^14.15.3` to interact with the Discord API.
+
+### Commands and Their Functionality
+
+#### 1. `/register`
+**Purpose**: Registers a new user or resets an existing user's balance.
+
+**Flow**:
+1. **Command Invocation**: The user types `/register` in the Discord server.
+2. **User Identification**: The bot retrieves the user ID and username of the user who invoked the command.
+3. **Set Initial Parameters**: The initial balance for new users is set (e.g., 100,000). The role name to assign is "Paper Trader".
+4. **Read Existing Player Data**: 
+   - Check if the `players.json` file exists.
+   - If it exists, read and parse its contents into an object (`players`).
+   - If it does not exist, initialize an empty object (`players`).
+5. **Fetch Member and Role Objects**:
+   - Fetch the member object corresponding to the user from the guild (Discord server).
+   - Fetch the role object for the "Paper Trader" role by searching the guild’s roles.
+6. **Check for Existing Registration**:
+   - Check if the user already has the "Paper Trader" role.
+   - If the user has the role, send a reply indicating that the user is already registered and exit the function.
+7. **Register or Reset User**:
+   - Check if the user is already in `players.json`.
+   - If the user is present, reset their balance to the initial balance.
+   - If the user is not present, add their information to the players object with their user ID, username, and initial balance.
+8. **Save Updated Player Data**: Write the updated players object back to the `players.json` file.
+9. **Assign "Paper Trader" Role**: Assign the "Paper Trader" role to the user in Discord.
+10. **Send Confirmation Message**: Inform the user that they have been registered successfully or their balance has been reset, and that the role has been assigned.
+11. **Send Welcome Message**: Send a welcome message to the `dg-announcements` channel, mentioning the user and instructing them to use `/help` to get started.
+12. **Update Leaderboard**: Call a utility function (`updateLeaderboard`) to update the leaderboard with the user’s balance.
+
+**Example**: 
+- User types `/register`.
+- Bot checks and updates `players.json`.
+- Assigns the "Paper Trader" role.
+- Sends confirmation and welcome messages.
+- Updates the leaderboard.
+
+#### 2. `/editbalance`
+**Purpose**: Allows an administrator to adjust a user's balance by a specified amount.
+
+**Flow**:
+1. **Command Invocation**: An admin types `/editbalance <user> <amount>` in the Discord server.
+2. **Admin Role Check**: The bot checks if the invoking user has the necessary permissions or role to execute the command (typically checking for an "Admin" role).
+3. **Retrieve Command Options**:
+   - `user`: The target user whose balance needs to be adjusted.
+   - `amount`: The amount by which to adjust the balance (can be positive or negative).
+4. **Read Existing Player Data**:
+   - Check if the `players.json` file exists.
+   - If it exists, read and parse its contents into an object (`players`).
+   - If it does not exist, return an error response indicating no registered users.
+5. **Check Target User Registration**:
+   - Check if the target user is present in the `players.json` file.
+   - If the user is not found, send an error response indicating that the user is not registered.
+6. **Adjust User Balance**: Update the target user's balance by adding the specified amount to their current balance.
+7. **Save Updated Player Data**: Write the updated players object back to the `players.json` file.
+8. **Send Confirmation Message**: Send a confirmation message to the admin, indicating that the user's balance has been successfully updated, including the new balance.
+9. **Log the Balance Change**: Optionally log the balance change to a specific channel (`profit-allocation`) for transparency and record-keeping.
+10. **Update Leaderboard**: Call a utility function (`updateLeaderboard`) to update the leaderboard with the new balances.
+
+**Example**: 
+- Admin types `/editbalance @User 5000`.
+- Bot updates `players.json`.
+- Logs the change in the `profit-allocation` channel.
+- Sends a confirmation message.
+- Updates the leaderboard.
+
+#### 3. `/balance`
+**Purpose**: Allows users to check their current balance in the paper trading system.
+
+**Flow**:
+1. **Command Invocation**: The user types `/balance` in the Discord server.
+2. **User Identification**: The bot retrieves the user ID and username of the user who invoked the command.
+3. **Read Existing Player Data**:
+   - Check if the `players.json` file exists.
+   - If it exists, read and parse its contents into an object (`players`).
+   - If it does not exist, return an error response indicating that no registered users are found.
+4. **Check User Registration**:
+   - Check if the invoking user is present in the `players.json` file.
+   - If the user is not found, send an error response indicating that the user is not registered.
+5. **Retrieve User Balance**: Extract the balance information of the invoking user from the `players.json` file.
+6. **Send Balance Information**: Send a message to the user displaying their current balance.
+
+**Example**: 
+- User types `/balance`.
+- Bot retrieves and displays the user's balance.
+
+#### 4. `/holdings`
+**Purpose**: Allows users to view their current holdings in the paper trading system.
+
+**Flow**:
+1. **Command Invocation**: The user types `/holdings` in the Discord server.
+2. **User Identification**: The bot retrieves the user ID and username of the user who invoked the command.
+3. **Check User Registration**:
+   - The bot fetches the member object corresponding to the user from the guild (Discord server).
+   - The bot checks if the user has the "Paper Trader" role.
+   - If the user does not have the "Paper Trader" role, send an error response indicating that the user is not registered.
+4. **Read Existing Trade Data**:
+   - Check if the `trades.json` file exists.
+   - If it exists, read and parse its contents into an object (`trades`).
+   - If it does not exist, return an error response indicating that there are no recorded trades.
+5. **Retrieve User Holdings**:
+   - Filter the `trades` object to retrieve only the active trades that belong to the invoking user.
+   - Active trades are trades that have not been closed or completed.
+6. **Check for Existing Holdings**:
+   - Check if the user has any active trades.
+   - If the user has no active trades, send a response indicating that they have no current holdings.
+7. **Send Holdings Information**:
+   - Format the user's holdings into a readable message.
+   - Send a message to the user displaying their current holdings, including details such as the trade ID, symbol, type (buy/sell), and amount.
+
+**Example**: 
+- User types `/holdings`.
+- Bot retrieves and displays the user's active trades.
+
+#### 5. `/trade`
+**Purpose**: Allows users to create a new trade in the paper trading system.
+
+**Flow**:
+1. **Command Invocation**: The user types `/trade` in the Discord server and fills in the required options provided by the bot:
+   - `type`: The type of trade (buy or sell) selected from a dropdown.
+   - `symbol`: The stock or asset symbol.
+   - `amount`: The number of shares or units to trade.
+   - Optional `takeprofit`: The level at which the trade will automatically close for a profit.
+   - Optional `stoploss`: The level at which the trade will automatically close to prevent further loss.
+2. **User Identification**: The bot retrieves the user ID and username of the user who invoked the command.
+3. **Check User Registration**:
+   - The bot fetches the member object corresponding to the user from the guild (Discord server).
+   - The bot checks if the user has the "Paper Trader" role.
+   - If the user does not have the "Paper Trader" role, send an error response indicating that the user is not registered.
+4. **Validate Command Parameters**:
+   - Validate the `type` to ensure it is either "buy" or "sell".
+   - Validate the `symbol` to ensure it is a valid stock or asset symbol.
+   - Validate the `amount` to ensure it is a positive integer.
+   - Validate optional `takeprofit` and `stoploss` parameters if provided.
+5. **Generate Trade Confirmation Message**:
+   - Create an embedded message with the trade details, including:
+     - Type (buy/sell)
+     - Symbol
+     - Amount
+     - Optional takeprofit and stoploss levels
+   - Include interactive buttons for the user to confirm or cancel the trade.
+6. **Send Confirmation Message**: Send the confirmation message to the user with the interactive buttons.
+7. **Wait for User Response**:
+   - Wait for the user to click either the "Confirm Trade" or "Cancel Trade" button.
+   - Set a timeout (e.g., 5 minutes) for the user to respond.
+8. **Handle User Response**:
+   - If the user clicks "
+
+Confirm Trade":
+     - Proceed to execute the trade.
+     - Log the trade details in the `trades.json` file.
+     - Update the user's balance in the `players.json` file.
+     - Send a confirmation message to the user indicating that the trade was successful.
+   - If the user clicks "Cancel Trade" or if the timeout expires:
+     - Send a message to the user indicating that the trade was canceled.
+     - Discard the trade details.
+9. **Update Leaderboard**: Call a utility function (`updateLeaderboard`) to update the leaderboard with the new balances.
+
+**Example**: 
+- User types `/trade`.
+- Bot validates and sends a confirmation message.
+- User confirms, and bot executes the trade.
+
+#### 6. `/showtrade`
+**Purpose**: Allows users to view the details of a specific trade by providing the trade ID. It also includes an option to close the trade if it is still open.
+
+**Flow**:
+1. **Command Invocation**: The user types `/showtrade <trade_id>` in the Discord server.
+   - The `trade_id` parameter specifies the ID of the trade the user wants to view.
+2. **User Identification**: The bot retrieves the user ID and username of the user who invoked the command.
+3. **Check User Registration**:
+   - The bot fetches the member object corresponding to the user from the guild (Discord server).
+   - The bot checks if the user has the "Paper Trader" role.
+   - If the user does not have the "Paper Trader" role, send an error response indicating that the user is not registered.
+4. **Read Existing Trade Data**:
+   - Check if the `trades.json` file exists.
+   - If it exists, read and parse its contents into an object (`trades`).
+   - If it does not exist, return an error response indicating that there are no recorded trades.
+5. **Find the Specific Trade**:
+   - Search the `trades` object for the trade with the specified `trade_id`.
+   - If the trade is not found, send an error response indicating that the trade ID is invalid or does not exist.
+6. **Verify User's Ownership of the Trade**:
+   - Check if the invoking user is the owner of the trade.
+   - If the user is not the owner, send an error response indicating that the user does not have permission to view this trade.
+7. **Generate Trade Details Message**:
+   - Create an embedded message with the trade details, including:
+     - Trade ID
+     - Symbol
+     - Type (buy/sell)
+     - Amount
+     - Status (open/closed)
+     - Optional takeprofit and stoploss levels
+     - Timestamp of the trade
+8. **Include Close Trade Button (If Trade is Open)**:
+   - If the trade is still open, include an interactive button for the user to close the trade.
+   - Set a timeout (e.g., 5 minutes) for the user to respond to the button.
+9. **Send Trade Details Message**: Send the trade details message to the user with the interactive close trade button (if applicable).
+10. **Wait for User Response (If Close Trade Button is Included)**:
+   - Wait for the user to click the "Close Trade" button.
+   - Set a timeout for the user to respond.
+11. **Handle Close Trade Response**:
+   - If the user clicks "Close Trade":
+     - Mark the trade as closed in the `trades.json` file.
+     - Update the user's balance in the `players.json` file based on the closing price.
+     - Send a confirmation message to the user indicating that the trade was successfully closed.
+     - Log the trade details in a specific channel (e.g., `trade-logs`) for record-keeping.
+   - If the timeout expires:
+     - Send a message to the user indicating that the close trade action was not confirmed in time.
+     - Discard the interactive close trade button.
+
+**Example**: 
+- User types `/showtrade 12345`.
+- Bot retrieves and displays the trade details.
+- User closes the trade, and bot updates the status and balance.
+
+### Leaderboard Functionality
+
+#### Overview
+The leaderboard is a dynamic feature that displays the top traders based on their current balances. It is updated whenever a user's balance changes, such as during registration or balance edits. The leaderboard ensures users can see how they rank compared to other traders.
+
+#### Components and Flow
+
+1. **Initialization**: The leaderboard functionality is initialized when the bot starts, involving reading existing data and preparing the leaderboard for updates.
+2. **Data Storage**:
+   - `players.json`: Stores user data, including their balances.
+   - `leaderboardMessageId.json`: Stores the ID of the message displaying the leaderboard in the Discord channel.
+3. **Reading Data**: 
+   - The bot reads the `players.json` file to get the latest user balances.
+   - The bot reads the `leaderboardMessageId.json` file to retrieve the message ID of the current leaderboard in the Discord channel.
+4. **Update Trigger Points**: 
+   - The leaderboard is updated at various points:
+     - User Registration (`/register` command)
+     - Balance Edit (`/editbalance` command)
+5. **Leaderboard Update Process**:
+   - **Fetch Data**: Read the `players.json` file to get the latest user data and balances.
+   - **Sort Users**: Sort the users by their balance in descending order.
+   - **Generate Leaderboard Text**: Create a formatted text string that lists the users and their balances in rank order.
+   - **Fetch or Create Leaderboard Message**: 
+     - Fetch the existing leaderboard message in the designated Discord channel using the message ID from `leaderboardMessageId.json`.
+     - If the message does not exist, create a new message in the channel and save its ID to `leaderboardMessageId.json`.
+6. **Error Handling**: 
+   - If errors occur during the update process, such as file read/write errors or Discord API errors, the bot logs these errors and may notify an admin.
+   - Common errors include file not found errors, message not found errors, and permission issues when trying to read/write data or send messages.
+7. **Utility Function for Leaderboard Update**: A utility function (`updateLeaderboard`) handles the entire process of reading data, sorting users, generating the leaderboard text, and updating the message in Discord.
+
+**Example**:
+- User registers or balance is edited.
+- Bot updates `players.json`.
+- Bot fetches and updates the leaderboard message in the designated channel.
+
+### `trading.js` Functionality
+
+#### Overview
+`trading.js` contains the main logic for handling various trading-related operations in the paper trading bot. This includes creating trades, managing user balances, and updating the leaderboard.
+
+#### Key Components and Functions
+
+1. **Initialization**:
+   - The file initializes by reading the required JSON files (`players.json` and `trades.json`) to load existing user and trade data into memory.
+2. **Class Definition**:
+   - A class, typically named `PaperTrading` or similar, encapsulates all the trading logic and related functionalities. This class maintains state and provides methods to perform various operations.
+3. **Methods for Trade Management**:
+   - **createTrade(userId, symbol, amount, type)**:
+     - Purpose: To create a new trade for a user.
+     - Flow:
+       - Validate the input parameters (e.g., symbol, amount, type).
+       - Check if the user is registered (has an entry in `players.json`).
+       - If valid, create a new trade object with details like userId, symbol, amount, type, and add it to the `trades.json`.
+       - Update the user's balance if necessary.
+       - Save the updated trade data back to `trades.json`.
+   - **closeTrade(userId, tradeId)**:
+     - Purpose: To close an existing trade for a user.
+     - Flow:
+       - Validate the `tradeId` and ensure it belongs to the `userId`.
+       - Calculate the profit/loss based on the current market price and the trade details.
+       - Update the trade status to closed in `trades.json`.
+       - Adjust the user's balance based on the profit/loss.
+       - Save the updated trade data and user balance.
+4. **Methods for User Management**:
+   - **registerUser(userId, username)**:
+     - Purpose: To register a new user or reset the balance of an existing user.
+     - Flow:
+       - Check if the user is already registered (has an entry in `players.json`).
+       - If the user is registered, reset their balance to the initial amount.
+       - If the user is not registered, add them to `players.json` with an initial balance.
+       - Save the updated user data.
+   - **editBalance(userId, amount)**:
+     - Purpose: To adjust a user's balance by a specified amount.
+     - Flow:
+       - Check if the user is registered.
+       - Update the user's balance by the specified amount.
+       - Save the updated user data back to `players.json`.
+5. **Leaderboard Management**:
+   - **updateLeaderboard(client, guild)**:
+     - Purpose: To update the leaderboard in the designated Discord channel.
+     - Flow:
+       - Read and sort the users by their balances from `players.json`.
+       - Generate a formatted text string displaying the top users and their balances.
+       - Fetch the leaderboard message using the message ID stored in `leaderboardMessageId.json`.
+       - Update the message content with the new leaderboard text.
+       - If the message ID does not exist or the message cannot be fetched, create a new message and update `leaderboardMessageId.json` with the new message ID.
+6. **Utility Functions**: Additional utility functions may be defined
+
+ to support the main operations, such as:
+   - **validateSymbol(symbol)**: Checks if the provided symbol is valid.
+   - **calculateProfitOrLoss(trade, currentPrice)**: Calculates the profit or loss for a given trade.
+
+#### Error Handling
+Each method includes error handling to manage potential issues, such as invalid inputs, user not found, or trade not found. Errors are logged to `error_log.json` and may trigger notifications to admins.
+
+### Changes Made to the Bot
+
+1. **Message Formatting**:
+   - Created `messageUtils.js` for consistent message formatting across the bot. This includes functions like `createEmbedMessage`, `createLeaderboardEmbed`, and `createErrorMessage`.
+
+2. **Command Consolidation**:
+   - Combined `balance.js` and `editbalance.js` into `balanceCommands.js` for managing balance-related commands.
+   - Combined `holdings.js` and `showtrade.js` into `tradeCommands.js` for managing trade-related commands.
+
+3. **Logging and Data Management**:
+   - Combined logging functions into `logger.js` to handle error logging and balance edit logging.
+   - Created `dataManager.js` to handle reading and writing JSON data for `players.json` and `trades.json`.
+
+4. **Refactored Commands**:
+   - Updated commands to use the new utility functions from `messageUtils.js` and `dataManager.js`.
+   - Ensured the `/register` and `/leaderboard` commands utilize these utilities for better readability and maintainability.
+
+### Conclusion
+This detailed overview covers the functionality of the Discord bot, including commands, leaderboard, and trading logic. The changes made streamline the bot's structure and ensure consistency in message formatting and data management. By following this overview, anyone assisting with the bot should have a comprehensive understanding of its operations and can refer to the provided code for implementation specifics.
